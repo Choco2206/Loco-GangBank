@@ -58,11 +58,14 @@ async function updateSupportersMessage(client) {
   if (supporters.length === 0) {
     description += 'Noch keine Supporter-Zahlungen in diesem Jahr.';
   } else {
-    description += supporters
-      .map((supporter, index) => {
-        return `**${index + 1}.** <@${supporter.userId}> — **${supporter.total} €**`;
-      })
-      .join('\n');
+    const medals = ['🥇', '🥈', '🥉'];
+
+description += supporters
+  .map((supporter, index) => {
+    const medal = medals[index] || '🏅';
+    return `${medal} <@${supporter.userId}> — **${supporter.total} €**`;
+  })
+  .join('\n');
   }
 
   const embed = new EmbedBuilder()
