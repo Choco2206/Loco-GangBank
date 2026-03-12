@@ -3,6 +3,34 @@ const { readJson, writeJson, generateId } = require('../utils/helpers');
 const { updateOverview } = require('../utils/overview');
 const { getCurrentYear } = require('../utils/year');
 
+const DEFAULT_FINE_CATALOG = [
+  {
+    key: 'spaetes_absagen',
+    label: 'Zu spätes Absagen trotz Zusage (unter 60 Minuten)',
+    amount: 1
+  },
+  {
+    key: 'pflicht_umfrage_nicht_abgestimmt',
+    label: 'Nicht abstimmen bei Pflicht-Umfragen',
+    amount: 1
+  },
+  {
+    key: 'zusage_nicht_erschienen',
+    label: 'Zusagen und nicht erscheinen',
+    amount: 5
+  },
+  {
+    key: 'rote_karte_pflichtspiel',
+    label: 'Rote Karte im Pflichtspiel',
+    amount: 2
+  },
+  {
+    key: 'sonstige_strafe',
+    label: 'Sonstige Strafe',
+    amount: 0
+  }
+];
+
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('strafe')
@@ -50,16 +78,19 @@ module.exports = {
       const transactions = readJson('data/transactions.json', []);
       const currentYear = getCurrentYear();
 
-      const fineCatalog = config.fineCatalog ?? [];
+      const fineCatalog =
+        Array.isArray(config.fineCatalog) && config.fineCatalog.length > 0
+          ? config.fineCatalog
+          : DEFAULT_FINE_CATALOG;
 
-console.log('grundKey aus Discord:', grundKey);
-console.log('fineCatalog keys:', fineCatalog.map(f => f.key));
+      console.log('grundKey aus Discord:', grundKey);
+      console.log('fineCatalog keys:', fineCatalog.map(f => f.key));
 
       const strafe = fineCatalog.find(f => f.key === grundKey);
 
       if (!strafe) {
         return interaction.reply({
-          content: '❌ Strafgrund nicht gefunden. Bitte prüfe den Strafkatalog in der config.json.',
+          content: `❌ Strafgrund nicht gefunden. Discord hat gesendet: ${grundKey}`,
           ephemeral: true
         });
       }
