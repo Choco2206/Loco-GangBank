@@ -1,6 +1,7 @@
 require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
+const cron = require('node-cron');
 const {
   Client,
   GatewayIntentBits,
@@ -8,6 +9,7 @@ const {
 } = require('discord.js');
 
 const { updateOverview } = require('./utils/overview');
+const { sendReminder } = require('./utils/reminder');
 const {
   addOrReactivateMember,
   deactivateMember,
@@ -56,6 +58,23 @@ client.once('clientReady', async () => {
     console.log('🔄 Mitglieder mit Loco Squad Rolle wurden synchronisiert.');
 
     await updateOverview(client);
+
+    cron.schedule(
+      '0 12 * * 0',
+      async () => {
+        try {
+          console.log('🔔 Starte automatischen Sonntags-Reminder...');
+          await sendReminder(client);
+        } catch (error) {
+          console.error('Fehler beim automatischen Reminder:', error);
+        }
+      },
+      {
+        timezone: 'Europe/Berlin'
+      }
+    );
+
+    console.log('✅ Automatischer Reminder ist aktiv. Jeden Sonntag um 12:00 Uhr (Europe/Berlin).');
   } catch (error) {
     console.error('Fehler beim Ready-Start:', error);
   }
@@ -88,7 +107,7 @@ client.on('guildMemberUpdate', async (oldMember, newMember) => {
   }
 });
 
-client.on('guildMemberRemove', async (member) => {
+client.on('guildMemberRemove', async member => {
   try {
     deactivateMember(member.user.id);
     console.log(`🚪 Mitglied hat den Server verlassen: ${member.user.username}`);
