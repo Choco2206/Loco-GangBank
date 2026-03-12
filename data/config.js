@@ -1,6 +1,6 @@
 {
   "yearlyFee": 12,
-  "overviewMessageId": null,
+  "overviewMessageId": "1481468237916016664",
   "allowedReasons": [
     "jahresbeitrag",
     "strafe",
