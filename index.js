@@ -5,7 +5,7 @@ const {
   EmbedBuilder
 } = require('discord.js');
 
-const { calculateOverview } = require('./utils/overview');
+const { updateOverview } = require('./utils/overview');
 const {
   addOrReactivateMember,
   deactivateMember,
@@ -59,7 +59,7 @@ client.once('ready', async () => {
 
     console.log('🔄 Mitglieder mit Loco Squad Rolle wurden synchronisiert.');
 
-    await postOverview();
+    await updateOverview(client);
   } catch (error) {
     console.error('Fehler beim Ready-Start:', error);
   }
