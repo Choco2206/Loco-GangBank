@@ -1,6 +1,7 @@
 const { SlashCommandBuilder } = require('discord.js');
 const { readJson, writeJson, generateId } = require('../utils/helpers');
 const { updateOverview } = require('../utils/overview');
+const { updateSupportersMessage } = require('../utils/supporters');
 const { getCurrentYear, getTransactionYear } = require('../utils/year');
 
 module.exports = {
@@ -140,6 +141,7 @@ module.exports = {
       }
 
       await updateOverview(client);
+      await updateSupportersMessage(client);
 
       return interaction.reply({
         content: `✅ Sonderzahlung ${currentYear} für ${user.username} wurde eingetragen.`,

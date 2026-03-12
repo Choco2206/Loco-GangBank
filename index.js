@@ -10,6 +10,7 @@ const {
 
 const { updateOverview } = require('./utils/overview');
 const { sendReminder } = require('./utils/reminder');
+const { updateSupportersMessage } = require('./utils/supporters');
 const {
   addOrReactivateMember,
   deactivateMember,
@@ -58,7 +59,7 @@ client.once('clientReady', async () => {
     console.log('🔄 Mitglieder mit Loco Squad Rolle wurden synchronisiert.');
 
     await updateOverview(client);
-
+await updateSupportersMessage(client);
     cron.schedule(
       '0 12 * * 0',
       async () => {
@@ -95,12 +96,14 @@ client.on('guildMemberUpdate', async (oldMember, newMember) => {
       addOrReactivateMember(newMember.user);
       console.log(`➕ Mitglied hinzugefügt/reaktiviert: ${newMember.user.username}`);
       await updateOverview(client);
+await updateSupportersMessage(client);
     }
 
     if (hadRole && !hasRole) {
       deactivateMember(newMember.user.id);
       console.log(`➖ Mitglied deaktiviert: ${newMember.user.username}`);
       await updateOverview(client);
+await updateSupportersMessage(client);
     }
   } catch (error) {
     console.error('Fehler bei guildMemberUpdate:', error);
@@ -112,6 +115,7 @@ client.on('guildMemberRemove', async member => {
     deactivateMember(member.user.id);
     console.log(`🚪 Mitglied hat den Server verlassen: ${member.user.username}`);
     await updateOverview(client);
+await updateSupportersMessage(client);
   } catch (error) {
     console.error('Fehler bei guildMemberRemove:', error);
   }
