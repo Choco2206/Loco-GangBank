@@ -83,9 +83,6 @@ module.exports = {
           ? config.fineCatalog
           : DEFAULT_FINE_CATALOG;
 
-      console.log('grundKey aus Discord:', grundKey);
-      console.log('fineCatalog keys:', fineCatalog.map(f => f.key));
-
       const strafe = fineCatalog.find(f => f.key === grundKey);
 
       if (!strafe) {
@@ -109,26 +106,13 @@ module.exports = {
         betrag = manuellerBetrag;
       }
 
-      const neueTransaktion = {
-        id: generateId('txn'),
-        userId: user.id,
-        name: user.username,
-        type: 'income',
-        amount: betrag,
-        reason: 'strafe',
-        note: notiz ? `${grundText} | ${notiz}` : grundText,
-        status: 'offen',
-        year: currentYear
-      };
-
-      transactions.push(neueTransaktion);
-      writeJson('data/transactions.json', transactions);
-
       const strafenChannel = await client.channels.fetch(process.env.GANGBANK_STRAFEN_CHANNEL_ID);
       const transaktionenChannel = await client.channels.fetch(process.env.GANGBANK_TRANSACTIONS_CHANNEL_ID);
 
+      let strafenMessage = null;
+
       if (strafenChannel) {
-        await strafenChannel.send(
+        strafenMessage = await strafenChannel.send(
           `⚖️ **Neue Strafe**\n\n` +
           `Spieler: <@${user.id}>\n` +
           `Grund: ${grundText}\n` +
@@ -138,6 +122,23 @@ module.exports = {
           `${notiz ? `\nNotiz: ${notiz}` : ''}`
         );
       }
+
+      const neueTransaktion = {
+        id: generateId('txn'),
+        userId: user.id,
+        name: user.username,
+        type: 'income',
+        amount: betrag,
+        reason: 'strafe',
+        note: notiz ? `${grundText} | ${notiz}` : grundText,
+        status: 'offen',
+        year: currentYear,
+        strafenMessageId: strafenMessage ? strafenMessage.id : null,
+        strafenChannelId: strafenChannel ? strafenChannel.id : null
+      };
+
+      transactions.push(neueTransaktion);
+      writeJson('data/transactions.json', transactions);
 
       if (transaktionenChannel) {
         await transaktionenChannel.send(
