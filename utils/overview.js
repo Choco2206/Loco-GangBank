@@ -28,7 +28,7 @@ function calculateOverview() {
     return !yearTransactions.some(tx =>
       tx.userId === member.userId &&
       tx.reason === 'jahresbeitrag' &&
-      tx.status === 'bezahlt'
+      ['bezahlt', 'extern_bezahlt'].includes(tx.status)
     );
   }).length;
 

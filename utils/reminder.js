@@ -13,13 +13,13 @@ async function sendReminder(client) {
     tx => getTransactionYear(tx, currentYear) === currentYear
   );
 
-  const offeneJahresbeitraege = aktiveMitglieder.filter(member => {
-    return !yearTransactions.some(tx =>
-      tx.userId === member.userId &&
-      tx.reason === 'jahresbeitrag' &&
-      tx.status === 'bezahlt'
-    );
-  });
+ const offeneJahresbeitraege = aktiveMitglieder.filter(member => {
+  return !yearTransactions.some(tx =>
+    tx.userId === member.userId &&
+    tx.reason === 'jahresbeitrag' &&
+    ['bezahlt', 'extern_bezahlt'].includes(tx.status)
+  );
+});
 
   const offeneStrafenMap = new Map();
 
