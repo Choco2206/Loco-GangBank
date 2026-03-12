@@ -1,40 +1,47 @@
 const { readJson, writeJson } = require('./helpers');
 const { EmbedBuilder } = require('discord.js');
+const { getCurrentYear, getTransactionYear } = require('./year');
 
 function calculateOverview() {
   const members = readJson('data/members.json', []);
   const transactions = readJson('data/transactions.json', []);
   const config = readJson('data/config.json', {});
+  const currentYear = getCurrentYear();
 
   const activeMembers = members.filter(member => member.active);
 
-  const totalIncome = transactions
+  const yearTransactions = transactions.filter(
+    tx => getTransactionYear(tx, currentYear) === currentYear
+  );
+
+  const totalIncome = yearTransactions
     .filter(tx => tx.type === 'income' && tx.status === 'bezahlt')
     .reduce((sum, tx) => sum + tx.amount, 0);
 
-  const totalExpenses = transactions
+  const totalExpenses = yearTransactions
     .filter(tx => tx.type === 'expense')
     .reduce((sum, tx) => sum + tx.amount, 0);
 
   const balance = totalIncome - totalExpenses;
 
   const openYearlyFees = activeMembers.filter(member => {
-    return !transactions.some(tx =>
+    return !yearTransactions.some(tx =>
       tx.userId === member.userId &&
       tx.reason === 'jahresbeitrag' &&
       tx.status === 'bezahlt'
     );
   }).length;
 
-  const openFines = transactions.filter(tx =>
-    tx.reason === 'strafe' && tx.status === 'offen'
+  const openFines = yearTransactions.filter(
+    tx => tx.reason === 'strafe' && tx.status === 'offen'
   ).length;
 
-  const totalFines = transactions
+  const totalFines = yearTransactions
     .filter(tx => tx.reason === 'strafe' && tx.status === 'bezahlt')
     .reduce((sum, tx) => sum + tx.amount, 0);
 
   return {
+    currentYear,
     yearlyFee: config.yearlyFee ?? 12,
     activeMembers: activeMembers.length,
     totalIncome,
@@ -48,14 +55,19 @@ function calculateOverview() {
 
 async function updateOverview(client) {
   const config = readJson('data/config.json', {});
+  const currentYear = getCurrentYear();
   const channel = await client.channels.fetch(process.env.GANGBANK_OVERVIEW_CHANNEL_ID);
 
   if (!channel) return;
 
+  if (!config.overviewMessages) {
+    config.overviewMessages = {};
+  }
+
   const overview = calculateOverview();
 
   const embed = new EmbedBuilder()
-    .setTitle('🐺 LOCO GANGBANK')
+    .setTitle(`🐺 LOCO GANGBANK ${overview.currentYear}`)
     .setDescription('Aktuelle Übersicht der Mannschaftskasse')
     .addFields(
       { name: 'Kontostand', value: `${overview.balance} €`, inline: true },
@@ -67,24 +79,26 @@ async function updateOverview(client) {
       { name: 'Einnahmen gesamt', value: `${overview.totalIncome} €`, inline: true },
       { name: 'Ausgaben gesamt', value: `${overview.totalExpenses} €`, inline: true }
     )
-    .setFooter({ text: 'Loco GangBank' })
+    .setFooter({ text: `Loco GangBank ${overview.currentYear}` })
     .setTimestamp();
 
   let message = null;
+  const existingMessageId = config.overviewMessages[currentYear];
 
-  if (config.overviewMessageId) {
+  if (existingMessageId) {
     try {
-      message = await channel.messages.fetch(config.overviewMessageId);
+      message = await channel.messages.fetch(existingMessageId);
       await message.edit({ embeds: [embed] });
       return;
     } catch (error) {
-      console.log('Übersichts-Nachricht nicht gefunden, erstelle neue.');
+      console.log(`Übersichts-Nachricht für ${currentYear} nicht gefunden, erstelle neue.`);
     }
   }
 
   message = await channel.send({ embeds: [embed] });
 
-  config.overviewMessageId = message.id;
+  config.currentYear = currentYear;
+  config.overviewMessages[currentYear] = message.id;
   writeJson('data/config.json', config);
 }
 

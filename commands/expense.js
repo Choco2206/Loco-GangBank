@@ -1,12 +1,12 @@
 const { SlashCommandBuilder } = require('discord.js');
 const { readJson, writeJson, generateId } = require('../utils/helpers');
 const { updateOverview } = require('../utils/overview');
+const { getCurrentYear } = require('../utils/year');
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('ausgabe')
     .setDescription('Trägt eine Ausgabe in die GangBank ein')
-
     .addStringOption(option =>
       option
         .setName('grund')
@@ -20,14 +20,12 @@ module.exports = {
           { name: 'Sonstiges', value: 'sonstiges' }
         )
     )
-
     .addIntegerOption(option =>
       option
         .setName('betrag')
         .setDescription('Betrag der Ausgabe in Euro')
         .setRequired(true)
     )
-
     .addStringOption(option =>
       option
         .setName('notiz')
@@ -39,6 +37,7 @@ module.exports = {
     const grund = interaction.options.getString('grund');
     const betrag = interaction.options.getInteger('betrag');
     const notiz = interaction.options.getString('notiz');
+    const currentYear = getCurrentYear();
 
     if (!betrag || betrag <= 0) {
       return interaction.reply({
@@ -68,7 +67,8 @@ module.exports = {
       amount: betrag,
       reason: grund,
       note: notiz || grundText,
-      status: 'bezahlt'
+      status: 'bezahlt',
+      year: currentYear
     };
 
     transactions.push(neueTransaktion);
@@ -78,6 +78,7 @@ module.exports = {
       await transaktionenChannel.send(
         `📒 **Neue Ausgabe eingetragen**\n\n` +
         `Grund: ${grundText}\n` +
+        `Jahr: ${currentYear}\n` +
         `Betrag: ${betrag} €\n` +
         `Status: bezahlt` +
         `${notiz ? `\nNotiz: ${notiz}` : ''}`
@@ -87,7 +88,7 @@ module.exports = {
     await updateOverview(client);
 
     await interaction.reply({
-      content: `✅ Ausgabe "${grundText}" über ${betrag} € wurde eingetragen.`,
+      content: `✅ Ausgabe "${grundText}" für ${currentYear} über ${betrag} € wurde eingetragen.`,
       ephemeral: true
     });
   }

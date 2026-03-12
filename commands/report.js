@@ -1,5 +1,6 @@
 const { SlashCommandBuilder } = require('discord.js');
 const { readJson } = require('../utils/helpers');
+const { getCurrentYear, getTransactionYear } = require('../utils/year');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -10,11 +11,15 @@ module.exports = {
     const members = readJson('data/members.json', []);
     const transactions = readJson('data/transactions.json', []);
     const config = readJson('data/config.json', {});
+    const currentYear = getCurrentYear();
 
     const aktiveMitglieder = members.filter(member => member.active);
+    const yearTransactions = transactions.filter(
+      tx => getTransactionYear(tx, currentYear) === currentYear
+    );
 
     const offeneJahresbeitraege = aktiveMitglieder.filter(member => {
-      return !transactions.some(tx =>
+      return !yearTransactions.some(tx =>
         tx.userId === member.userId &&
         tx.reason === 'jahresbeitrag' &&
         tx.status === 'bezahlt'
@@ -23,7 +28,7 @@ module.exports = {
 
     const offeneStrafenMap = new Map();
 
-    transactions.forEach(tx => {
+    yearTransactions.forEach(tx => {
       if (tx.reason === 'strafe' && tx.status === 'offen' && tx.userId) {
         if (!offeneStrafenMap.has(tx.userId)) {
           offeneStrafenMap.set(tx.userId, {
@@ -56,7 +61,7 @@ module.exports = {
 
     await interaction.reply({
       content:
-        `💰 **Offene Zahlungen**\n\n` +
+        `💰 **Offene Zahlungen ${currentYear}**\n\n` +
         `**Jahresbeitrag (${yearlyFee} €) offen:**\n${jahresbeitragText}\n\n` +
         `**Offene Strafen:**\n${strafenText}`,
       ephemeral: true

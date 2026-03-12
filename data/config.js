@@ -1,6 +1,8 @@
 {
   "yearlyFee": 12,
-  "overviewMessageId": "1481468237916016664",
+  "currentYear": 2026,
+  "overviewMessages": {},
+  "supporterMessages": {},
   "allowedReasons": [
     "jahresbeitrag",
     "strafe",

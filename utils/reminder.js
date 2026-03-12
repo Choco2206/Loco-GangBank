@@ -1,14 +1,20 @@
 const { readJson } = require('./helpers');
+const { getCurrentYear, getTransactionYear } = require('./year');
 
 async function sendReminder(client) {
   const members = readJson('data/members.json', []);
   const transactions = readJson('data/transactions.json', []);
   const config = readJson('data/config.json', {});
+  const currentYear = getCurrentYear();
 
   const aktiveMitglieder = members.filter(member => member.active);
 
+  const yearTransactions = transactions.filter(
+    tx => getTransactionYear(tx, currentYear) === currentYear
+  );
+
   const offeneJahresbeitraege = aktiveMitglieder.filter(member => {
-    return !transactions.some(tx =>
+    return !yearTransactions.some(tx =>
       tx.userId === member.userId &&
       tx.reason === 'jahresbeitrag' &&
       tx.status === 'bezahlt'
@@ -17,7 +23,7 @@ async function sendReminder(client) {
 
   const offeneStrafenMap = new Map();
 
-  transactions.forEach(tx => {
+  yearTransactions.forEach(tx => {
     if (tx.reason === 'strafe' && tx.status === 'offen' && tx.userId) {
       if (!offeneStrafenMap.has(tx.userId)) {
         offeneStrafenMap.set(tx.userId, {
@@ -36,7 +42,7 @@ async function sendReminder(client) {
   const offeneStrafen = Array.from(offeneStrafenMap.values());
   const yearlyFee = config.yearlyFee ?? 12;
 
-  let reminderText = `🔔 **GangBank Reminder**\n\n`;
+  let reminderText = `🔔 **GangBank Reminder ${currentYear}**\n\n`;
 
   reminderText += `**Offene Jahresbeiträge (${yearlyFee} €):**\n`;
   reminderText += offeneJahresbeitraege.length > 0
@@ -62,7 +68,7 @@ async function sendReminder(client) {
   }
 
   await reminderChannel.send(reminderText);
-  console.log('✅ Automatischer Reminder wurde gesendet.');
+  console.log(`✅ Automatischer Reminder für ${currentYear} wurde gesendet.`);
 }
 
 module.exports = {

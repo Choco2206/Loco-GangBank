@@ -1,19 +1,18 @@
 const { SlashCommandBuilder } = require('discord.js');
 const { readJson, writeJson, generateId } = require('../utils/helpers');
 const { updateOverview } = require('../utils/overview');
+const { getCurrentYear, getTransactionYear } = require('../utils/year');
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('zahlung')
     .setDescription('Trägt eine Zahlung ein oder markiert eine Strafe als bezahlt')
-
     .addUserOption(option =>
       option
         .setName('spieler')
         .setDescription('Spieler, für den die Zahlung eingetragen wird')
         .setRequired(true)
     )
-
     .addStringOption(option =>
       option
         .setName('grund')
@@ -25,14 +24,12 @@ module.exports = {
           { name: 'Strafe bezahlen', value: 'strafe_bezahlen' }
         )
     )
-
     .addIntegerOption(option =>
       option
         .setName('betrag')
         .setDescription('Betrag in Euro, nur bei Jahresbeitrag oder Sonderzahlung nötig')
         .setRequired(false)
     )
-
     .addStringOption(option =>
       option
         .setName('notiz')
@@ -48,6 +45,7 @@ module.exports = {
 
     const config = readJson('data/config.json', {});
     const transactions = readJson('data/transactions.json', []);
+    const currentYear = getCurrentYear();
 
     const transaktionenChannel = await client.channels.fetch(
       process.env.GANGBANK_TRANSACTIONS_CHANNEL_ID
@@ -60,12 +58,13 @@ module.exports = {
         tx =>
           tx.userId === user.id &&
           tx.reason === 'jahresbeitrag' &&
-          tx.status === 'bezahlt'
+          tx.status === 'bezahlt' &&
+          getTransactionYear(tx, currentYear) === currentYear
       );
 
       if (bereitsBezahlt) {
         return interaction.reply({
-          content: `❌ ${user.username} hat den Jahresbeitrag bereits als bezahlt eingetragen.`,
+          content: `❌ ${user.username} hat den Jahresbeitrag für ${currentYear} bereits bezahlt.`,
           ephemeral: true
         });
       }
@@ -77,8 +76,9 @@ module.exports = {
         type: 'income',
         amount: betrag,
         reason: 'jahresbeitrag',
-        note: notiz || 'Jahresbeitrag',
-        status: 'bezahlt'
+        note: notiz || `Jahresbeitrag ${currentYear}`,
+        status: 'bezahlt',
+        year: currentYear
       };
 
       transactions.push(neueTransaktion);
@@ -89,6 +89,7 @@ module.exports = {
           `📒 **Neue Zahlung eingetragen**\n\n` +
           `Spieler: <@${user.id}>\n` +
           `Typ: Jahresbeitrag\n` +
+          `Jahr: ${currentYear}\n` +
           `Betrag: ${betrag} €\n` +
           `Status: bezahlt` +
           `${notiz ? `\nNotiz: ${notiz}` : ''}`
@@ -98,7 +99,7 @@ module.exports = {
       await updateOverview(client);
 
       return interaction.reply({
-        content: `✅ Jahresbeitrag für ${user.username} wurde als bezahlt eingetragen.`,
+        content: `✅ Jahresbeitrag ${currentYear} für ${user.username} wurde eingetragen.`,
         ephemeral: true
       });
     }
@@ -118,8 +119,9 @@ module.exports = {
         type: 'income',
         amount: manuellerBetrag,
         reason: 'sonderzahlung',
-        note: notiz || 'Sonderzahlung',
-        status: 'bezahlt'
+        note: notiz || `Sonderzahlung ${currentYear}`,
+        status: 'bezahlt',
+        year: currentYear
       };
 
       transactions.push(neueTransaktion);
@@ -130,6 +132,7 @@ module.exports = {
           `📒 **Neue Zahlung eingetragen**\n\n` +
           `Spieler: <@${user.id}>\n` +
           `Typ: Sonderzahlung\n` +
+          `Jahr: ${currentYear}\n` +
           `Betrag: ${manuellerBetrag} €\n` +
           `Status: bezahlt` +
           `${notiz ? `\nNotiz: ${notiz}` : ''}`
@@ -139,7 +142,7 @@ module.exports = {
       await updateOverview(client);
 
       return interaction.reply({
-        content: `✅ Sonderzahlung für ${user.username} wurde eingetragen.`,
+        content: `✅ Sonderzahlung ${currentYear} für ${user.username} wurde eingetragen.`,
         ephemeral: true
       });
     }
@@ -149,12 +152,13 @@ module.exports = {
         tx =>
           tx.userId === user.id &&
           tx.reason === 'strafe' &&
-          tx.status === 'offen'
+          tx.status === 'offen' &&
+          getTransactionYear(tx, currentYear) === currentYear
       );
 
       if (offeneStrafen.length === 0) {
         return interaction.reply({
-          content: `❌ ${user.username} hat aktuell keine offene Strafe.`,
+          content: `❌ ${user.username} hat aktuell keine offene Strafe für ${currentYear}.`,
           ephemeral: true
         });
       }
@@ -172,6 +176,7 @@ module.exports = {
         await transaktionenChannel.send(
           `📒 **Strafe als bezahlt markiert**\n\n` +
           `Spieler: <@${user.id}>\n` +
+          `Jahr: ${currentYear}\n` +
           `Grund: ${letzteOffeneStrafe.note}\n` +
           `Betrag: ${letzteOffeneStrafe.amount} €\n` +
           `Status: bezahlt`
@@ -181,7 +186,7 @@ module.exports = {
       await updateOverview(client);
 
       return interaction.reply({
-        content: `✅ Offene Strafe von ${user.username} wurde als bezahlt markiert.`,
+        content: `✅ Offene Strafe ${currentYear} von ${user.username} wurde als bezahlt markiert.`,
         ephemeral: true
       });
     }
