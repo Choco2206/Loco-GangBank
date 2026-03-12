@@ -6,12 +6,14 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('strafe')
     .setDescription('Trägt eine Strafe für einen Spieler ein')
+
     .addUserOption(option =>
       option
         .setName('spieler')
-        .setDescription('Spieler, der die Strafe bekommt')
+        .setDescription('Spieler der die Strafe bekommt')
         .setRequired(true)
     )
+
     .addStringOption(option =>
       option
         .setName('grund')
@@ -25,20 +27,23 @@ module.exports = {
           { name: 'Sonstige Strafe', value: 'sonstige_strafe' }
         )
     )
+
     .addIntegerOption(option =>
       option
         .setName('betrag')
         .setDescription('Nur bei sonstiger Strafe: Betrag in Euro')
         .setRequired(false)
     )
+
     .addStringOption(option =>
       option
         .setName('notiz')
-        .setDescription('Optionale Zusatznotiz')
+        .setDescription('Optionale Notiz')
         .setRequired(false)
     ),
 
   async execute(interaction, client) {
+
     const user = interaction.options.getUser('spieler');
     const grundKey = interaction.options.getString('grund');
     const manuellerBetrag = interaction.options.getInteger('betrag');
@@ -47,11 +52,11 @@ module.exports = {
     const config = readJson('data/config.json', {});
     const transactions = readJson('data/transactions.json', []);
 
-    const strafe = config.fineCatalog?.find(f => f.key === grundKey);
+    const strafe = config.fineCatalog.find(f => f.key === grundKey);
 
     if (!strafe) {
       return interaction.reply({
-        content: '❌ Der Strafgrund wurde nicht gefunden.',
+        content: '❌ Strafgrund nicht gefunden.',
         ephemeral: true
       });
     }
@@ -60,16 +65,20 @@ module.exports = {
     let grundText = strafe.label;
 
     if (grundKey === 'sonstige_strafe') {
+
       if (!manuellerBetrag || manuellerBetrag <= 0) {
         return interaction.reply({
-          content: '❌ Bei "Sonstige Strafe" musst du einen gültigen Betrag angeben.',
+          content: '❌ Bei "Sonstige Strafe" musst du einen Betrag angeben.',
           ephemeral: true
         });
       }
+
       betrag = manuellerBetrag;
+
     }
 
     const neueTransaktion = {
+
       id: generateId('txn'),
       userId: user.id,
       name: user.username,
@@ -78,34 +87,41 @@ module.exports = {
       reason: 'strafe',
       note: notiz ? `${grundText} | ${notiz}` : grundText,
       status: 'offen'
+
     };
 
     transactions.push(neueTransaktion);
+
     writeJson('data/transactions.json', transactions);
 
     const strafenChannel = await client.channels.fetch(process.env.GANGBANK_STRAFEN_CHANNEL_ID);
     const transaktionenChannel = await client.channels.fetch(process.env.GANGBANK_TRANSACTIONS_CHANNEL_ID);
 
     if (strafenChannel) {
+
       await strafenChannel.send(
-        `⚖️ **Neue Strafe**\n\n` +
-        `**Spieler:** <@${user.id}>\n` +
-        `**Grund:** ${grundText}\n` +
-        `**Betrag:** ${betrag} €\n` +
-        `**Status:** offen` +
-        `${notiz ? `\n**Notiz:** ${notiz}` : ''}`
+        `⚖️ **Neue Strafe**
+
+Spieler: <@${user.id}>
+Grund: ${grundText}
+Betrag: ${betrag} €
+Status: offen`
       );
+
     }
 
     if (transaktionenChannel) {
+
       await transaktionenChannel.send(
-        `📒 **Neue Forderung eingetragen**\n\n` +
-        `**Spieler:** <@${user.id}>\n` +
-        `**Typ:** Strafe\n` +
-        `**Grund:** ${grundText}\n` +
-        `**Betrag:** ${betrag} €\n` +
-        `**Status:** offen`
+        `📒 **Neue Forderung eingetragen**
+
+Spieler: <@${user.id}>
+Typ: Strafe
+Grund: ${grundText}
+Betrag: ${betrag} €
+Status: offen`
       );
+
     }
 
     await updateOverview(client);
@@ -114,5 +130,6 @@ module.exports = {
       content: `✅ Strafe für ${user.username} wurde eingetragen.`,
       ephemeral: true
     });
+
   }
 };
