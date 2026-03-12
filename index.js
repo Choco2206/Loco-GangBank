@@ -108,6 +108,15 @@ client.on('interactionCreate', async interaction => {
     return;
   }
 
+  const adminChannelId = process.env.GANGBANK_ADMIN_CHANNEL_ID;
+
+  if (interaction.channelId !== adminChannelId) {
+    return interaction.reply({
+      content: '❌ Diese GangBank-Befehle können nur im Admin-Channel genutzt werden.',
+      ephemeral: true
+    });
+  }
+
   try {
     await command.execute(interaction, client);
   } catch (error) {
