@@ -1,23 +1,38 @@
 const fs = require('fs');
 const path = require('path');
 
-function readJson(filePath, fallback = null) {
+function ensureFileExists(filePath, fallback) {
+  const dir = path.dirname(filePath);
+
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+
+  if (!fs.existsSync(filePath)) {
+    fs.writeFileSync(filePath, JSON.stringify(fallback, null, 2));
+  }
+}
+
+function readJson(file, fallback = []) {
+  const fullPath = path.join(__dirname, '..', file);
+
   try {
-    const fullPath = path.join(__dirname, '..', filePath);
+    ensureFileExists(fullPath, fallback);
     const data = fs.readFileSync(fullPath, 'utf8');
     return JSON.parse(data);
-  } catch (error) {
-    console.error(`Fehler beim Lesen von ${filePath}:`, error);
+  } catch (err) {
+    console.error(`Fehler beim Lesen von ${file}:`, err);
     return fallback;
   }
 }
 
-function writeJson(filePath, data) {
+function writeJson(file, data) {
+  const fullPath = path.join(__dirname, '..', file);
+
   try {
-    const fullPath = path.join(__dirname, '..', filePath);
-    fs.writeFileSync(fullPath, JSON.stringify(data, null, 2), 'utf8');
-  } catch (error) {
-    console.error(`Fehler beim Schreiben von ${filePath}:`, error);
+    fs.writeFileSync(fullPath, JSON.stringify(data, null, 2));
+  } catch (err) {
+    console.error(`Fehler beim Schreiben von ${file}:`, err);
   }
 }
 
