@@ -1,6 +1,15 @@
 require('dotenv').config();
-const { Client, GatewayIntentBits, EmbedBuilder } = require('discord.js');
+const {
+  Client,
+  GatewayIntentBits,
+  EmbedBuilder
+} = require('discord.js');
+
 const { calculateOverview } = require('./utils/overview');
+const {
+  addOrReactivateMember,
+  deactivateMember
+} = require('./utils/members');
 
 const client = new Client({
   intents: [
@@ -41,6 +50,39 @@ async function postOverview() {
 client.once('ready', async () => {
   console.log(`✅ ${client.user.tag} ist online!`);
   await postOverview();
+});
+
+client.on('guildMemberUpdate', async (oldMember, newMember) => {
+  try {
+    const locoRoleId = process.env.LOCO_ROLE_ID;
+
+    const hadRole = oldMember.roles.cache.has(locoRoleId);
+    const hasRole = newMember.roles.cache.has(locoRoleId);
+
+    if (!hadRole && hasRole) {
+      addOrReactivateMember(newMember.user);
+      console.log(`➕ Mitglied hinzugefügt/reaktiviert: ${newMember.user.username}`);
+      await postOverview();
+    }
+
+    if (hadRole && !hasRole) {
+      deactivateMember(newMember.user.id);
+      console.log(`➖ Mitglied deaktiviert: ${newMember.user.username}`);
+      await postOverview();
+    }
+  } catch (error) {
+    console.error('Fehler bei guildMemberUpdate:', error);
+  }
+});
+
+client.on('guildMemberRemove', async (member) => {
+  try {
+    deactivateMember(member.user.id);
+    console.log(`🚪 Mitglied hat den Server verlassen: ${member.user.username}`);
+    await postOverview();
+  } catch (error) {
+    console.error('Fehler bei guildMemberRemove:', error);
+  }
 });
 
 client.login(process.env.DISCORD_TOKEN);
