@@ -42,10 +42,44 @@ function deactivateMember(userId) {
   }
 }
 
+function syncMembersByRole(guild, roleId) {
+  const members = getMembers();
+  const roleMembers = guild.members.cache.filter(member => member.roles.cache.has(roleId));
+
+  const roleMemberIds = new Set();
+
+  roleMembers.forEach(member => {
+    roleMemberIds.add(member.user.id);
+
+    const existingMember = members.find(m => m.userId === member.user.id);
+
+    if (existingMember) {
+      existingMember.name = member.user.username;
+      existingMember.active = true;
+    } else {
+      members.push({
+        userId: member.user.id,
+        name: member.user.username,
+        role: 'member',
+        active: true
+      });
+    }
+  });
+
+  members.forEach(member => {
+    if (!roleMemberIds.has(member.userId)) {
+      member.active = false;
+    }
+  });
+
+  saveMembers(members);
+}
+
 module.exports = {
   getMembers,
   saveMembers,
   findMemberById,
   addOrReactivateMember,
-  deactivateMember
+  deactivateMember,
+  syncMembersByRole
 };

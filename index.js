@@ -8,7 +8,8 @@ const {
 const { calculateOverview } = require('./utils/overview');
 const {
   addOrReactivateMember,
-  deactivateMember
+  deactivateMember,
+  syncMembersByRole
 } = require('./utils/members');
 
 const client = new Client({
@@ -48,8 +49,20 @@ async function postOverview() {
 }
 
 client.once('ready', async () => {
-  console.log(`✅ ${client.user.tag} ist online!`);
-  await postOverview();
+  try {
+    console.log(`✅ ${client.user.tag} ist online!`);
+
+    const guild = await client.guilds.fetch(process.env.GUILD_ID);
+    await guild.members.fetch();
+
+    syncMembersByRole(guild, process.env.LOCO_ROLE_ID);
+
+    console.log('🔄 Mitglieder mit Loco Squad Rolle wurden synchronisiert.');
+
+    await postOverview();
+  } catch (error) {
+    console.error('Fehler beim Ready-Start:', error);
+  }
 });
 
 client.on('guildMemberUpdate', async (oldMember, newMember) => {
