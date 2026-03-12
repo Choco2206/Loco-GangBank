@@ -1,7 +1,10 @@
 require('dotenv').config();
+const fs = require('fs');
+const path = require('path');
 const {
   Client,
-  GatewayIntentBits
+  GatewayIntentBits,
+  Collection
 } = require('discord.js');
 
 const { updateOverview } = require('./utils/overview');
@@ -17,6 +20,30 @@ const client = new Client({
     GatewayIntentBits.GuildMembers
   ]
 });
+
+client.commands = new Collection();
+
+const commandsPath = path.join(__dirname, 'commands');
+
+if (fs.existsSync(commandsPath)) {
+  const commandFiles = fs
+    .readdirSync(commandsPath)
+    .filter(file => file.endsWith('.js'));
+
+  for (const file of commandFiles) {
+    const filePath = path.join(commandsPath, file);
+    const command = require(filePath);
+
+    if (command.data && command.execute) {
+      client.commands.set(command.data.name, command);
+      console.log(`✅ Command geladen: ${command.data.name}`);
+    } else {
+      console.log(`⚠️ Command-Datei ${file} ist unvollständig.`);
+    }
+  }
+} else {
+  console.log('⚠️ Kein commands-Ordner gefunden.');
+}
 
 client.once('clientReady', async () => {
   try {
@@ -68,6 +95,35 @@ client.on('guildMemberRemove', async (member) => {
     await updateOverview(client);
   } catch (error) {
     console.error('Fehler bei guildMemberRemove:', error);
+  }
+});
+
+client.on('interactionCreate', async interaction => {
+  if (!interaction.isChatInputCommand()) return;
+
+  const command = client.commands.get(interaction.commandName);
+
+  if (!command) {
+    console.log(`⚠️ Kein Command gefunden für: ${interaction.commandName}`);
+    return;
+  }
+
+  try {
+    await command.execute(interaction, client);
+  } catch (error) {
+    console.error(`Fehler beim Ausführen von /${interaction.commandName}:`, error);
+
+    if (interaction.replied || interaction.deferred) {
+      await interaction.followUp({
+        content: '❌ Beim Ausführen des Befehls ist ein Fehler aufgetreten.',
+        ephemeral: true
+      });
+    } else {
+      await interaction.reply({
+        content: '❌ Beim Ausführen des Befehls ist ein Fehler aufgetreten.',
+        ephemeral: true
+      });
+    }
   }
 });
 
