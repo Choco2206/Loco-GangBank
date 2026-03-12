@@ -2,11 +2,11 @@ const { readJson, writeJson } = require('./helpers');
 const { EmbedBuilder } = require('discord.js');
 
 function calculateOverview() {
-  const members = readJson('data/members.json');
-  const transactions = readJson('data/transactions.json');
-  const config = readJson('data/config.json');
+  const members = readJson('data/members.json', []);
+  const transactions = readJson('data/transactions.json', []);
+  const config = readJson('data/config.json', {});
 
-  const activeMembers = members.filter(m => m.active);
+  const activeMembers = members.filter(member => member.active);
 
   const totalIncome = transactions
     .filter(tx => tx.type === 'income' && tx.status === 'bezahlt')
@@ -35,7 +35,7 @@ function calculateOverview() {
     .reduce((sum, tx) => sum + tx.amount, 0);
 
   return {
-    yearlyFee: config.yearlyFee,
+    yearlyFee: config.yearlyFee ?? 12,
     activeMembers: activeMembers.length,
     totalIncome,
     totalExpenses,
@@ -47,8 +47,10 @@ function calculateOverview() {
 }
 
 async function updateOverview(client) {
-  const config = readJson('data/config.json');
+  const config = readJson('data/config.json', {});
   const channel = await client.channels.fetch(process.env.GANGBANK_OVERVIEW_CHANNEL_ID);
+
+  if (!channel) return;
 
   const overview = calculateOverview();
 
@@ -68,15 +70,15 @@ async function updateOverview(client) {
     .setFooter({ text: 'Loco GangBank' })
     .setTimestamp();
 
-  let message;
+  let message = null;
 
   if (config.overviewMessageId) {
     try {
       message = await channel.messages.fetch(config.overviewMessageId);
       await message.edit({ embeds: [embed] });
       return;
-    } catch (err) {
-      console.log("Übersichts-Nachricht nicht gefunden, erstelle neu.");
+    } catch (error) {
+      console.log('Übersichts-Nachricht nicht gefunden, erstelle neue.');
     }
   }
 

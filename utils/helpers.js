@@ -1,14 +1,14 @@
 const fs = require('fs');
 const path = require('path');
 
-function readJson(filePath) {
+function readJson(filePath, fallback = null) {
   try {
     const fullPath = path.join(__dirname, '..', filePath);
     const data = fs.readFileSync(fullPath, 'utf8');
     return JSON.parse(data);
   } catch (error) {
     console.error(`Fehler beim Lesen von ${filePath}:`, error);
-    return [];
+    return fallback;
   }
 }
 
