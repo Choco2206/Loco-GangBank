@@ -51,6 +51,10 @@ module.exports = {
       const currentYear = getCurrentYear();
 
       const fineCatalog = config.fineCatalog ?? [];
+
+console.log('grundKey aus Discord:', grundKey);
+console.log('fineCatalog keys:', fineCatalog.map(f => f.key));
+
       const strafe = fineCatalog.find(f => f.key === grundKey);
 
       if (!strafe) {
